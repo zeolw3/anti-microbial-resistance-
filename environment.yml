@@ -1,0 +1,26 @@
+import random
+random.seed(7)
+G = 50000                    # fake genome length
+GENE = (10000, 11500)        # where the pretend "SQLE-like" gene sits
+MUT_POS = 10600              # 1-based position we mutate
+ref = "".join(random.choice("ACGT") for _ in range(G))
+pat = list(ref)
+old = pat[MUT_POS-1]
+new = random.choice([b for b in "ACGT" if b != old])
+pat[MUT_POS-1] = new
+pat = "".join(pat)
+def rc(s): return s[::-1].translate(str.maketrans("ACGT","TGCA"))
+def err(s, rate=0.005):
+    return "".join(random.choice("ACGT") if random.random()<rate else c for c in s)
+with open("ref.fa","w") as f: f.write(">fake_ref\n"+ref+"\n")
+n_pairs = int(G*60/300)      # about 60x coverage, 2x150 bp reads
+with open("sample_R1.fastq","w") as r1, open("sample_R2.fastq","w") as r2:
+    for i in range(n_pairs):
+        frag = random.randint(250,400); st = random.randint(0, G-frag)
+        fr = pat[st:st+frag]
+        a, b = err(fr[:150]), err(rc(fr)[:150])
+        r1.write(f"@r{i}/1\n{a}\n+\n{'I'*150}\n")
+        r2.write(f"@r{i}/2\n{b}\n+\n{'I'*150}\n")
+with open("truth.txt","w") as f: f.write(f"{MUT_POS}\t{old}>{new}\n")
+print(f"Wrote ref.fa and {n_pairs} read pairs. Spiked mutation at {MUT_POS}: {old}>{new}")
+ 
